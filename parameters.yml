@@ -1,0 +1,26 @@
+#-------------- Simulation Parameters ------------------#
+#
+# Parameter definition for discharging simulation in 2D
+
+# Max time iteration
+T: 10
+# max row number
+M: 60
+# max column number
+N: 80
+# Electric Umbral x
+Ecx: 400
+# Electric Umbral y
+Ecy: 400
+# Max charge at init per cell
+q: 10
+# Percentaje of top (0, 100)
+cloud: 0.05
+# percent of moving charge [0, 0.25]
+k: 0.2
+# saving steps
+save: 10
+
+
+
+

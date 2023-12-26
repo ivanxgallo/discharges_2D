@@ -29,6 +29,8 @@ Ecy     = Float64(params["Ecy"])
 cloud   = params["cloud"]
 k       = params["k"]
 save    = params["save"]
+x       = params["x"]
+y       = params["y"]
 
 @info "parameters are: $params"
 
@@ -40,15 +42,16 @@ end
 fields = Fields(M,N)
 # width of cloud
 W = Int(cloud*N)
-println(" ")
-println(fields.umbrals)
-println(" ")
+xi = Int((1 - cloud)*N)
+xf = N
+yi = Int(M/2) - W
+yf = Int(M/2) + W
 
 
 for t in 1:T
     @info "Executing iteration: t = $t"
     # introducing a random amount of charge
-    set_initial_charge(fields, q, W)
+    set_points_charge(fields, q, xi, xf, yi, yf, 5)
 
     # calculating fields and potential
     computing_fields(fields)
@@ -68,14 +71,14 @@ for t in 1:T
         @info "Carga total en sistema: $(sum(fields.rho))"
         tau += 1
         @info "Instability cycle: t = $t, tau = $tau"
-        equilibrate_charges(fields, k, Ecx, Ecy)
+        equilibrate_charges2(fields, k)
         computing_fields(fields)
         check_instability = check_rho(fields)
         update_fields(fields)
         superated_umbrals(fields, Ecx, Ecy)
         if tau%save == 0
+            @info "Saving..."
             save_fields(fields, "$(t)_$tau")
-            println(fields.umbrals)
         end
     end
     @info "Saving iteration t = $t"

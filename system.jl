@@ -31,6 +31,19 @@ function set_initial_charge(f::Fields, q::Int64, W::Int64)
     f.rho_t += rho_aux
 end
 
+function set_point_charge(f::Fields, q::Int64, x::Int64, y::Int64)
+    f.rho_t[y,x] += q
+end
+
+function set_points_charge(f::Fields, q::Int64, xi::Int64, xf::Int64, yi::Int64, yf::Int64, N::Int64)
+    for n in 1:N
+        x = rand(xi:xf)
+        y = rand(yi:yf)
+
+        f.rho_t[y,x] += rand(0:q)
+    end
+end
+
 # remember that coordinates x and y are mapped to i, j
 # but in a matrix i is row and j is column indexes (typically)
 # meaning that i operate in y and j in x axis
@@ -63,7 +76,7 @@ function superated_umbrals(f::Fields, Ecx::Float64, Ecy::Float64)
     for i in 1:f.N
         for j in 1:f.M
             if abs(f.E_t[j,i][1]) > Ecx
-                if f.E_t[j,i][1] < 0 && i > 1
+                if f.E_t[j,i][1] < 0 && i >= 1
                     push!(f.umbrals[j,i], (j,i-1))
                 else
                     if i < f.N
@@ -144,6 +157,25 @@ function equilibrate_charges(f::Fields, k::Float64, Ecx::Float64, Ecy::Float64)
 
             discharge = discharge_x + discharge_y
             f.rho_t[j,i] = f.rho_t[j,i] - discharge + up + down + left + right
+        end
+    end
+end
+
+function equilibrate_charges2(f::Fields, k::Float64)
+    for i in 1:f.N
+        for j in 1:f.M
+            # geting adjacent values
+            up    = (j < f.M && in((j,i), f.umbrals[j+1,i])) ? trunc(Int64, k*f.rho[j+1,i]) : 0
+            down  = (j > 1 && in((j,i), f.umbrals[j-1,i])) ? trunc(Int64, k*f.rho[j-1,i]) : 0
+            left  = (i > 1 && in((j,i), f.umbrals[j,i-1])) ? trunc(Int64, k*f.rho[j,i-1]) : 0
+            right = (i < f.N && in((j,i), f.umbrals[j,i+1])) ? trunc(Int64, k*f.rho[j,i+1]) : 0
+
+            discharge = 0
+            for c in 1:length(f.umbrals[j,i])
+                discharge += trunc(Int64, k*f.rho[j,i])
+            end
+
+            f.rho_t[j,i] += up + down + left + right - discharge
         end
     end
 end

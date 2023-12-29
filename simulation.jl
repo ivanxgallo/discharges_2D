@@ -51,7 +51,9 @@ yf = Int(M/2) + W
 for t in 1:T
     @info "Executing iteration: t = $t"
     # introducing a random amount of charge
-    set_points_charge(fields, q, xi, xf, yi, yf, 5)
+    #set_points_charge(fields, q, xi, xf, yi, yf, 10)
+    set_point_charge(fields, 50, 55, 50)
+    #set_point_charge(fields, 50, 55, 1)
 
     # calculating fields and potential
     computing_fields(fields)
@@ -68,16 +70,18 @@ for t in 1:T
     tau = 0
     check_instability = true
     while check_instability   #(fields)
+        @info "Phi = $(fields.phi_t[50,55]) \t E = $(fields.E_t[50,55])"
+        @info "Rho = $(fields.rho_t[50,55])"
         @info "Carga total en sistema: $(sum(fields.rho))"
         tau += 1
         @info "Instability cycle: t = $t, tau = $tau"
-        equilibrate_charges2(fields, k)
+        equilibrate_charges(fields, k)
         computing_fields(fields)
         check_instability = check_rho(fields)
         update_fields(fields)
         superated_umbrals(fields, Ecx, Ecy)
         if tau%save == 0
-            @info "Saving..."
+            @info "Saving iteration t = $t, tau = $tau"
             save_fields(fields, "$(t)_$tau")
         end
     end

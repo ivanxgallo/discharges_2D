@@ -50,14 +50,23 @@ end
 # we will change the above and will say that: matrix[i,j] -> matriz[j,i] (matrix[y,x])
 # being y the vertical axis and x the horizontal axis, as usually is.
 function computing_fields(f::Fields)
+    f.phi_t = zeros(Float64, M, N)
+    f.E_t   = fill([0., 0.], M, N)
     for i in 1:f.N
         for j in 1:f.M
             for k in 1:f.N
                 for l in 1:f.M
                     if i!=k || j!=l
+                        #@info "PASE POR AQUI"
                         f.phi_t[j,i]  += f.rho_t[l,k]*G(i,k,j,l)
                         f.E_t[j,i][1] += f.rho_t[l,k]*DxG(i,k,j,l)
                         f.E_t[j,i][2] += f.rho_t[l,k]*DyG(i,k,j,l)
+                    else
+                        #@info "i = $i, j = $j"
+                        #@info "k = $k, l = $l"
+                        f.phi_t[j,i]  += f.rho_t[l,k]*I(i,k,j,l)
+                        f.E_t[j,i][1] += f.rho_t[l,k]*IxG(i,k,j,l)
+                        f.E_t[j,i][2] += f.rho_t[l,k]*IyG(i,k,j,l)
                     end
                 end
             end
@@ -115,6 +124,47 @@ function clean_umbrals(f::Fields)
     f.umbrals = fill([], M, N)
 end
 
+function equilibrate_charges(f::Fields, k::Float64)
+    for i in 1:f.N
+        for j in 1:f.M
+            # geting adjacent values
+            up    = (j < f.M && in((j,i), f.umbrals[j+1,i])) ? trunc(Int64, k*f.rho[j+1,i]) : 0
+            down  = (j > 1 && in((j,i), f.umbrals[j-1,i])) ? trunc(Int64, k*f.rho[j-1,i]) : 0
+            left  = (i > 1 && in((j,i), f.umbrals[j,i-1])) ? trunc(Int64, k*f.rho[j,i-1]) : 0
+            right = (i < f.N && in((j,i), f.umbrals[j,i+1])) ? trunc(Int64, k*f.rho[j,i+1]) : 0
+
+            discharge = 0
+            for c in 1:length(f.umbrals[j,i])
+                discharge += trunc(Int64, k*f.rho[j,i])
+            end
+
+            f.rho_t[j,i] += up + down + left + right - discharge
+        end
+    end
+end
+
+function save_fields(f::Fields, name::String)
+    writedlm("density_$name.csv", f.rho)
+end
+
+
+
+
+# -------------------------- defining green functions ------------------------ #
+f(x,x0,y,y0)   = 1/sqrt((x-x0)^2 + (y-y0)^2)
+G(x,x0,y,y0)   = f(x,x0,y,y0) - f(x,-x0,y,y0)
+DxG(x,x0,y,y0) = (x-x0)*f(x,x0,y,y0)^3-(x+x0)*f(x,-x0,y,y0)^3
+DyG(x,x0,y,y0) = (y-y0)*(f(x,x0,y,y0)^3 + f(x,-x0,y,y0)^3)
+I(x,x0,y,y0)   = -f(x,-x0,y,y0)
+IxG(x,x0,y,y0) = -(x+x0)*f(x,-x0,y,y0)^3
+IyG(x,x0,y,y0) = (y-y0)*f(x,-x0,y,y0)^3
+
+# --------------------------- other auxiliar functions ---------------------------- #
+compare_one(x) = max(x, 1)
+
+
+# --------------------------------- DEAD CODE ------------------------------------ #
+#=
 function equilibrate_charges(f::Fields, k::Float64, Ecx::Float64, Ecy::Float64)
     for i in 1:f.N
         for j in 1:f.M
@@ -161,34 +211,4 @@ function equilibrate_charges(f::Fields, k::Float64, Ecx::Float64, Ecy::Float64)
     end
 end
 
-function equilibrate_charges2(f::Fields, k::Float64)
-    for i in 1:f.N
-        for j in 1:f.M
-            # geting adjacent values
-            up    = (j < f.M && in((j,i), f.umbrals[j+1,i])) ? trunc(Int64, k*f.rho[j+1,i]) : 0
-            down  = (j > 1 && in((j,i), f.umbrals[j-1,i])) ? trunc(Int64, k*f.rho[j-1,i]) : 0
-            left  = (i > 1 && in((j,i), f.umbrals[j,i-1])) ? trunc(Int64, k*f.rho[j,i-1]) : 0
-            right = (i < f.N && in((j,i), f.umbrals[j,i+1])) ? trunc(Int64, k*f.rho[j,i+1]) : 0
-
-            discharge = 0
-            for c in 1:length(f.umbrals[j,i])
-                discharge += trunc(Int64, k*f.rho[j,i])
-            end
-
-            f.rho_t[j,i] += up + down + left + right - discharge
-        end
-    end
-end
-
-function save_fields(f::Fields, name::String)
-    writedlm("density_$name.csv", f.rho)
-end
-
-
-
-
-# -------------------------- defining green functions ------------------------ #
-f(x,x0,y,y0)   = 1/sqrt((x-x0)^2 + (y-y0)^2)
-G(x,x0,y,y0)   = f(x,x0,y,y0) - f(x,-x0,y,y0)
-DxG(x,x0,y,y0) = (x-x0)*f(x,x0,y,y0)^3-(x+x0)*f(x,-x0,y,y0)^3
-DyG(x,x0,y,y0) = (y-y0)*(f(x,x0,y,y0)^3-f(x,-x0,y,y0)^3)
+=#
